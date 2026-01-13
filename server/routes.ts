@@ -4,8 +4,9 @@ import { storage } from "./storage";
 import { setupAuth } from "./auth";
 import { api } from "@shared/routes";
 import { z } from "zod";
-import { ASSET_STATUS, TRANSACTION_TYPES } from "@shared/schema";
+import { ASSET_STATUS, TRANSACTION_TYPES, users } from "@shared/schema";
 import { hashPassword } from "./auth";
+import { db } from "./db";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -58,7 +59,13 @@ export async function registerRoutes(
     if (!req.isAuthenticated() || (req.user as any).role !== "ADMIN") {
       return res.status(403).send("Admin access required");
     }
-    const allUsers = await db.select().from(users);
+    const allUsers = await db.select({
+      id: users.id,
+      username: users.username,
+      role: users.role,
+      baseId: users.baseId,
+      createdAt: users.createdAt
+    }).from(users);
     res.json(allUsers);
   });
 
