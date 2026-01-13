@@ -9,12 +9,15 @@ import {
   Crosshair, 
   Wallet,
   Calendar,
-  Filter
+  Filter,
+  ShoppingCart,
+  ArrowRightLeft
 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { format } from "date-fns";
+import { clsx } from "clsx";
 
 export default function Dashboard() {
   const [selectedBaseId, setSelectedBaseId] = useState<number | undefined>(undefined);
