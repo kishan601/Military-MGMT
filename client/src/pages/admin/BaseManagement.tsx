@@ -103,10 +103,13 @@ export default function BaseManagement() {
                         />
                         <Button 
                           size="sm" 
-                          onClick={() => updateBudgetMutation.mutate({ id: b.id, budget: budgetVal })}
+                          onClick={() => {
+                            console.log("Saving budget:", budgetVal);
+                            updateBudgetMutation.mutate({ id: b.id, budget: budgetVal });
+                          }}
                           disabled={updateBudgetMutation.isPending}
                         >
-                          Save
+                          {updateBudgetMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}
                         </Button>
                       </div>
                     ) : (
