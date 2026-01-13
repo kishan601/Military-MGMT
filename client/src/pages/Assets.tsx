@@ -1,7 +1,8 @@
 import { useAssets, useBases, useTransferAsset, useExpendAsset, useAssignAsset } from "@/hooks/use-data";
 import { Layout } from "@/components/Layout";
 import { useState } from "react";
-import { ASSET_TYPES, ASSET_STATUS, type Asset } from "@shared/schema";
+import { ASSET_TYPES, ASSET_STATUS, type Asset, ROLES } from "@shared/schema";
+import { useAuth } from "@/hooks/use-auth";
 import { 
   Package, 
   Search, 
@@ -9,7 +10,8 @@ import {
   ArrowRightLeft, 
   Trash2, 
   UserPlus, 
-  MoreVertical 
+  MoreVertical,
+  Edit2
 } from "lucide-react";
 import {
   Dialog,
@@ -22,6 +24,8 @@ import {
 import { clsx } from "clsx";
 
 export default function Assets() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === ROLES.ADMIN;
   const [filters, setFilters] = useState({ type: "", baseId: "", status: "" });
   const { data: assets, isLoading } = useAssets(
     { 
@@ -144,7 +148,15 @@ export default function Assets() {
                     </td>
                     <td className="p-4 text-right">
                        <div className="flex justify-end gap-1 opacity-50 group-hover:opacity-100 transition-opacity">
-                          {asset.status === ASSET_STATUS.AVAILABLE && (
+                          {isAdmin && (
+                            <button 
+                              className="p-1.5 hover:bg-muted hover:text-foreground rounded-sm transition-colors" 
+                              title="Edit Asset Details"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                          )}
+                          {(asset.status === ASSET_STATUS.AVAILABLE || isAdmin) && (
                             <>
                               <button 
                                 onClick={() => { setSelectedAsset(asset); setActionType("transfer"); }}

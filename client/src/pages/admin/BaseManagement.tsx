@@ -29,12 +29,19 @@ export default function BaseManagement() {
   const updateBudgetMutation = useMutation({
     mutationFn: async ({ id, budget }: { id: number; budget: string }) => {
       const res = await apiRequest("PATCH", `/api/bases/${id}`, { budget });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text);
+      }
       return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/bases"] });
       setEditingId(null);
       toast({ title: "Success", description: "Budget updated successfully" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     }
   });
 

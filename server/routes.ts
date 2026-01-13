@@ -47,8 +47,13 @@ export async function registerRoutes(
     const updates = req.body;
     
     // Validate budget if provided
-    if (updates.budget !== undefined && isNaN(Number(updates.budget))) {
-      return res.status(400).send("Invalid budget value");
+    if (updates.budget !== undefined) {
+      const val = Number(updates.budget);
+      if (isNaN(val)) {
+        return res.status(400).send("Invalid budget value");
+      }
+      // Ensure we pass it back as string for numeric type
+      updates.budget = val.toString();
     }
 
     const base = await storage.updateBase(baseId, updates);
@@ -256,20 +261,47 @@ export async function registerRoutes(
 }
 
 async function seedDatabase() {
-    const bases = await storage.getBases();
-    if (bases.length === 0) {
-        const baseA = await storage.createBase({ name: "Alpha Base", location: "Sector 1", commander: "Col. Smith" });
-        const baseB = await storage.createBase({ name: "Bravo Base", location: "Sector 2", commander: "Maj. Jones" });
-        const baseC = await storage.createBase({ name: "HQ", location: "Capital", commander: "Gen. Doe" });
+    const basesList = await storage.getBases();
+    if (basesList.length === 0) {
+        const baseA = await storage.createBase({ name: "Alpha Base", location: "Sector 1", commander: "Col. Smith", budget: "1000000" });
+        const baseB = await storage.createBase({ name: "Bravo Base", location: "Sector 2", commander: "Maj. Jones", budget: "500000" });
+        const baseC = await storage.createBase({ name: "HQ", location: "Capital", commander: "Gen. Doe", budget: "5000000" });
         
         // Create Admin User
         const adminPassword = await hashPassword("admin123");
-        await storage.createUser({
+        const adminUser = await storage.createUser({
             username: "admin",
             password: adminPassword,
             role: "ADMIN"
         });
 
-        // I'll make the bases available.
+        // Add some dummy assets for inventory visibility
+        const asset1 = await storage.createAsset({
+            name: "M1 Abrams Tank",
+            serialNumber: "TK-7782",
+            type: "VEHICLE",
+            status: "AVAILABLE",
+            baseId: baseA.id,
+            condition: "EXCELLENT",
+            value: "6000000"
+        });
+
+        const asset2 = await storage.createAsset({
+            name: "M4 Carbine",
+            serialNumber: "WP-0012",
+            type: "WEAPON",
+            status: "AVAILABLE",
+            baseId: baseA.id,
+            condition: "GOOD",
+            value: "1200"
+        });
+
+        await storage.createTransaction({
+            assetId: asset1.id,
+            type: TRANSACTION_TYPES.PURCHASE,
+            toBaseId: baseA.id,
+            userId: adminUser.id,
+            notes: "Initial deployment"
+        });
     }
 }

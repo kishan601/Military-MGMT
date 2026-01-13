@@ -15,11 +15,35 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Loader2, UserPlus, Shield } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useState } from "react";
 
 export default function UserManagement() {
   const { toast } = useToast();
+  const [isOpen, setIsOpen] = useState(false);
+  const [formData, setFormData] = useState({ username: "", password: "", role: ROLES.LOGISTICS });
+
   const { data: users, isLoading } = useQuery<User[]>({ 
     queryKey: ["/api/admin/users"] 
+  });
+
+  const createUserMutation = useMutation({
+    mutationFn: async (data: typeof formData) => {
+      const res = await apiRequest("POST", "/api/register", data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      setIsOpen(false);
+      setFormData({ username: "", password: "", role: ROLES.LOGISTICS });
+      toast({ title: "Success", description: "Personnel added successfully" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
   });
 
   if (isLoading) {
@@ -39,11 +63,64 @@ export default function UserManagement() {
           <h1 className="text-3xl font-bold tracking-tight text-white uppercase">User Management</h1>
           <p className="text-muted-foreground font-mono text-xs mt-1">Personnel Authorization Control</p>
         </div>
-        <Button className="gap-2">
+        <Button className="gap-2" onClick={() => setIsOpen(true)}>
           <UserPlus className="h-4 w-4" />
           Add Personnel
         </Button>
       </div>
+
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogContent className="bg-card border-border">
+          <DialogHeader>
+            <DialogTitle className="uppercase font-bold tracking-wider">Add New Personnel</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Username</Label>
+              <Input 
+                value={formData.username} 
+                onChange={e => setFormData({...formData, username: e.target.value})} 
+                placeholder="Callsign/Username"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Temporary Password</Label>
+              <Input 
+                type="password"
+                value={formData.password} 
+                onChange={e => setFormData({...formData, password: e.target.value})} 
+                placeholder="********"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Access Level</Label>
+              <Select 
+                value={formData.role} 
+                onValueChange={v => setFormData({...formData, role: v as any})}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ROLES.ADMIN}>ADMIN</SelectItem>
+                  <SelectItem value={ROLES.COMMANDER}>COMMANDER</SelectItem>
+                  <SelectItem value={ROLES.LOGISTICS}>LOGISTICS</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setIsOpen(false)}>Cancel</Button>
+            <Button 
+              onClick={() => createUserMutation.mutate(formData)}
+              disabled={createUserMutation.isPending}
+            >
+              {createUserMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Authorize Personnel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
         <CardHeader>
