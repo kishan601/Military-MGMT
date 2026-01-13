@@ -1,7 +1,7 @@
-import { useAssets, useBases, useTransferAsset, useExpendAsset, useAssignAsset } from "@/hooks/use-data";
+import { useAssets, useBases, useTransferAsset, useExpendAsset, useAssignAsset, useCreateAsset } from "@/hooks/use-data";
 import { Layout } from "@/components/Layout";
 import { useState } from "react";
-import { ASSET_TYPES, ASSET_STATUS, type Asset, ROLES } from "@shared/schema";
+import { ASSET_TYPES, ASSET_STATUS, type Asset, ROLES, ASSET_CONDITIONS } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
 import { 
   Package, 
@@ -11,7 +11,9 @@ import {
   Trash2, 
   UserPlus, 
   MoreVertical,
-  Edit2
+  Edit2,
+  Plus,
+  Loader2
 } from "lucide-react";
 import {
   Dialog,
@@ -22,9 +24,15 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { clsx } from "clsx";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Assets() {
   const { user } = useAuth();
+  const { toast } = useToast();
   const isAdmin = user?.role === ROLES.ADMIN;
   const [filters, setFilters] = useState({ type: "", baseId: "", status: "" });
   const { data: assets, isLoading } = useAssets(
@@ -37,14 +45,49 @@ export default function Assets() {
   const { data: bases } = useBases();
 
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
-  const [actionType, setActionType] = useState<"transfer" | "assign" | "expend" | null>(null);
+  const [actionType, setActionType] = useState<"transfer" | "assign" | "expend" | "create" | "edit" | null>(null);
+
+  // New Asset State
+  const [newAsset, setNewAsset] = useState({
+    name: "",
+    serialNumber: "",
+    type: ASSET_TYPES.COMMUNICATION,
+    status: ASSET_STATUS.AVAILABLE,
+    baseId: "",
+    condition: "EXCELLENT",
+    value: "0"
+  });
 
   // Action Logic
   const transferMutation = useTransferAsset();
   const assignMutation = useAssignAsset();
   const expendMutation = useExpendAsset();
+  const createAssetMutation = useCreateAsset();
 
   const handleAction = async (formData: any) => {
+    if (actionType === "create") {
+      try {
+        await createAssetMutation.mutateAsync({
+          ...newAsset,
+          baseId: Number(newAsset.baseId),
+        });
+        toast({ title: "Success", description: "Asset created successfully" });
+        setActionType(null);
+        setNewAsset({
+          name: "",
+          serialNumber: "",
+          type: ASSET_TYPES.COMMUNICATION,
+          status: ASSET_STATUS.AVAILABLE,
+          baseId: "",
+          condition: ASSET_CONDITIONS.EXCELLENT,
+          value: "0"
+        });
+      } catch (e: any) {
+        toast({ title: "Error", description: e.message, variant: "destructive" });
+      }
+      return;
+    }
+
     if (!selectedAsset) return;
 
     try {
@@ -108,6 +151,13 @@ export default function Assets() {
                <option value="">All Bases</option>
                {bases?.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
              </select>
+
+             {isAdmin && (
+               <Button onClick={() => setActionType("create")} className="gap-2">
+                 <Plus className="h-4 w-4" />
+                 Add Asset
+               </Button>
+             )}
           </div>
         </div>
 
@@ -192,72 +242,141 @@ export default function Assets() {
       </div>
 
       {/* Action Dialog */}
-      <Dialog open={!!selectedAsset} onOpenChange={(open) => !open && setSelectedAsset(null)}>
-        <DialogContent className="bg-card border-border text-foreground">
+      <Dialog open={!!actionType} onOpenChange={(open) => !open && setActionType(null)}>
+        <DialogContent className="bg-card border-border text-foreground max-w-lg">
           <DialogHeader>
             <DialogTitle className="uppercase tracking-wider flex items-center gap-2">
               {actionType === "transfer" && <ArrowRightLeft className="w-5 h-5 text-primary" />}
               {actionType === "assign" && <UserPlus className="w-5 h-5 text-blue-500" />}
               {actionType === "expend" && <Trash2 className="w-5 h-5 text-destructive" />}
-              {actionType} Asset: {selectedAsset?.serialNumber}
+              {actionType === "create" && <Plus className="w-5 h-5 text-primary" />}
+              {actionType} Asset {selectedAsset ? `: ${selectedAsset.serialNumber}` : ""}
             </DialogTitle>
             <DialogDescription>
               {actionType === "transfer" && "Relocate this asset to another base. This will create a movement record."}
               {actionType === "assign" && "Assign this asset to personnel. It will be marked as unavailable."}
               {actionType === "expend" && "Mark this asset as expended/consumed. This action is irreversible."}
+              {actionType === "create" && "Register a new military asset into the inventory system."}
             </DialogDescription>
           </DialogHeader>
 
-          <form 
-            onSubmit={(e) => {
-              e.preventDefault();
-              const formData = new FormData(e.currentTarget);
-              handleAction(Object.fromEntries(formData));
-            }}
-            className="space-y-4 py-4"
-          >
-            {actionType === "transfer" && (
-              <div className="space-y-2">
-                <label className="text-xs uppercase font-bold text-muted-foreground">Destination Base</label>
-                <select name="toBaseId" required className="w-full bg-secondary border border-border rounded-sm p-2 text-sm focus:border-primary outline-none">
-                  {bases?.filter(b => b.id !== selectedAsset?.baseId).map(b => (
-                    <option key={b.id} value={b.id}>{b.name}</option>
-                  ))}
-                </select>
+          {actionType === "create" ? (
+            <div className="space-y-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Asset Name</Label>
+                  <Input 
+                    value={newAsset.name} 
+                    onChange={e => setNewAsset({...newAsset, name: e.target.value})} 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Serial Number</Label>
+                  <Input 
+                    value={newAsset.serialNumber} 
+                    onChange={e => setNewAsset({...newAsset, serialNumber: e.target.value})} 
+                  />
+                </div>
               </div>
-            )}
-            
-            <div className="space-y-2">
-              <label className="text-xs uppercase font-bold text-muted-foreground">Notes / Authorization</label>
-              <textarea 
-                name="notes" 
-                rows={3} 
-                className="w-full bg-secondary border border-border rounded-sm p-2 text-sm focus:border-primary outline-none resize-none"
-                placeholder="Enter details..." 
-              />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Asset Type</Label>
+                  <Select value={newAsset.type} onValueChange={v => setNewAsset({...newAsset, type: v as any})}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {Object.values(ASSET_TYPES).map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Assigned Base</Label>
+                  <Select value={newAsset.baseId} onValueChange={v => setNewAsset({...newAsset, baseId: v})}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {bases?.map(b => <SelectItem key={b.id} value={b.id.toString()}>{b.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Condition</Label>
+                  <Select value={newAsset.condition} onValueChange={v => setNewAsset({...newAsset, condition: v as any})}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {Object.values(ASSET_CONDITIONS).map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Value ($)</Label>
+                  <Input 
+                    type="number"
+                    value={newAsset.value} 
+                    onChange={e => setNewAsset({...newAsset, value: e.target.value})} 
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="ghost" onClick={() => setActionType(null)}>Cancel</Button>
+                <Button onClick={() => handleAction({})} disabled={createAssetMutation.isPending}>
+                  {createAssetMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Register Asset
+                </Button>
+              </DialogFooter>
             </div>
+          ) : (
+            <form 
+              onSubmit={(e) => {
+                e.preventDefault();
+                const formData = new FormData(e.currentTarget);
+                handleAction(Object.fromEntries(formData));
+              }}
+              className="space-y-4 py-4"
+            >
+              {actionType === "transfer" && (
+                <div className="space-y-2">
+                  <label className="text-xs uppercase font-bold text-muted-foreground">Destination Base</label>
+                  <select name="toBaseId" required className="w-full bg-secondary border border-border rounded-sm p-2 text-sm focus:border-primary outline-none text-foreground">
+                    {bases?.filter(b => b.id !== selectedAsset?.baseId).map(b => (
+                      <option key={b.id} value={b.id}>{b.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              
+              <div className="space-y-2">
+                <label className="text-xs uppercase font-bold text-muted-foreground">Notes / Authorization</label>
+                <textarea 
+                  name="notes" 
+                  rows={3} 
+                  className="w-full bg-secondary border border-border rounded-sm p-2 text-sm focus:border-primary outline-none resize-none text-foreground"
+                  placeholder="Enter details..." 
+                />
+              </div>
 
-            <DialogFooter className="mt-6">
-              <button 
-                type="button" 
-                onClick={() => setSelectedAsset(null)}
-                className="px-4 py-2 text-sm font-medium hover:bg-secondary rounded-sm transition-colors"
-              >
-                Cancel
-              </button>
-              <button 
-                type="submit"
-                className={clsx(
-                  "px-4 py-2 text-sm font-bold uppercase tracking-wider rounded-sm transition-all shadow-lg",
-                  actionType === "transfer" && "bg-primary text-primary-foreground hover:bg-primary/90 shadow-primary/20",
-                  actionType === "assign" && "bg-blue-600 text-white hover:bg-blue-700 shadow-blue-600/20",
-                  actionType === "expend" && "bg-destructive text-white hover:bg-destructive/90 shadow-destructive/20",
-                )}
-              >
-                Confirm {actionType}
-              </button>
-            </DialogFooter>
-          </form>
+              <DialogFooter className="mt-6">
+                <button 
+                  type="button" 
+                  onClick={() => setActionType(null)}
+                  className="px-4 py-2 text-sm font-medium hover:bg-secondary rounded-sm transition-colors text-foreground"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit"
+                  className={clsx(
+                    "px-4 py-2 text-sm font-bold uppercase tracking-wider rounded-sm transition-all shadow-lg",
+                    actionType === "transfer" && "bg-primary text-primary-foreground hover:bg-primary/90 shadow-primary/20",
+                    actionType === "assign" && "bg-blue-600 text-white hover:bg-blue-700 shadow-blue-600/20",
+                    actionType === "expend" && "bg-destructive text-white hover:bg-destructive/90 shadow-destructive/20",
+                  )}
+                >
+                  Confirm {actionType}
+                </button>
+              </DialogFooter>
+            </form>
+          )}
         </DialogContent>
       </Dialog>
     </Layout>

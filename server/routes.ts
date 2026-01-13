@@ -56,8 +56,16 @@ export async function registerRoutes(
       updates.budget = val.toString();
     }
 
-    const base = await storage.updateBase(baseId, updates);
-    res.json(base);
+    try {
+      const base = await storage.updateBase(baseId, updates);
+      if (!base) {
+        return res.status(404).send("Base not found");
+      }
+      res.json(base);
+    } catch (error) {
+      console.error("Error updating base:", error);
+      res.status(500).send("Internal server error");
+    }
   });
 
   app.get("/api/admin/users", async (req, res) => {
@@ -77,12 +85,12 @@ export async function registerRoutes(
   // Assets
   app.get(api.assets.list.path, async (req, res) => {
     const filters = req.query;
-    const assets = await storage.getAssets({
+    const assetsData = await storage.getAssets({
       baseId: filters.baseId ? Number(filters.baseId) : undefined,
       type: filters.type as string,
       status: filters.status as string,
     });
-    res.json(assets);
+    res.json(assetsData);
   });
 
   app.get(api.assets.get.path, async (req, res) => {
@@ -151,30 +159,12 @@ export async function registerRoutes(
       // So one record is enough. But for counting "Transfer In" vs "Transfer Out" for a SPECIFIC base:
       // A base sees it as Transfer Out if fromBaseId == base.id
       // A base sees it as Transfer In if toBaseId == base.id
-      type: TRANSACTION_TYPES.TRANSFER_OUT, // Just use a generic TRANSFER type? Or derive from context.
-      // Let's use TRANSFER_OUT for source log, or just "TRANSFER" and logic handles it.
-      // Schema has specific types. Let's use TRANSFER_OUT for now as the action initiation.
-      // Actually, let's just call it TRANSFER_OUT? No, let's use a generic TRANSFER if possible, or handle in stats.
-      // I defined TRANSFER_IN and TRANSFER_OUT.
-      // Let's just create ONE transaction record, and stats logic will count it based on baseId match.
-      // But the type field is single.
-      // Let's record it as TRANSFER_OUT from source?
-      // Wait, if I query by baseId, I need to know if it came in or went out.
-      // Maybe I should record TWO transactions?
-      // No, that duplicates data.
-      // I'll stick to one record.
-      // I'll update the stats logic to look at fromBaseId/toBaseId.
-      // But the TYPE field might be confusing.
-      // Let's genericize to TRANSFER in my mind, but use TRANSFER_OUT for the API call context.
+      type: TRANSACTION_TYPES.TRANSFER_OUT,
       fromBaseId: asset.baseId,
       toBaseId: toBaseId,
       userId: user.id,
       notes,
     });
-    
-    // Actually, for the "Type" field to be useful for simple filtering, maybe I should use "TRANSFER".
-    // I'll update the schema in my head to treat TRANSFER_IN/OUT as derived, but schema has them as enum.
-    // I will insert it as TRANSFER_OUT (initiated transfer).
     
     res.json(updatedAsset);
   });
@@ -212,20 +202,21 @@ export async function registerRoutes(
       
       if (!user) return res.status(401).send("Unauthorized");
       
-      const asset = await storage.getAsset(assetId);
-      
-      const updatedAsset = await storage.updateAsset(assetId, {
-          status: ASSET_STATUS.ASSIGNED
-      });
-      
-      await storage.createTransaction({
-          assetId,
-          type: TRANSACTION_TYPES.ASSIGN,
-          fromBaseId: asset.baseId,
-          toBaseId: asset.baseId,
-          userId: user.id,
-          notes
-      });
+    const asset = await storage.getAsset(assetId);
+    if (!asset) return res.status(404).send("Asset not found");
+
+    const updatedAsset = await storage.updateAsset(assetId, {
+        status: ASSET_STATUS.ASSIGNED
+    });
+    
+    await storage.createTransaction({
+        assetId,
+        type: TRANSACTION_TYPES.ASSIGN,
+        fromBaseId: asset.baseId,
+        toBaseId: asset.baseId,
+        userId: user.id,
+        notes
+    });
       
       res.json(updatedAsset);
   });

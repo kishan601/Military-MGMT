@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, buildUrl, type InsertAsset, type InsertBase } from "@shared/routes";
+import { api, buildUrl } from "@shared/routes";
+import { type InsertAsset, type InsertBase } from "@shared/schema";
 
 // --- Bases ---
 export function useBases() {

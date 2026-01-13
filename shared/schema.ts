@@ -34,6 +34,14 @@ export const TRANSACTION_TYPES = {
   EXPEND: "EXPEND",
 } as const;
 
+export const ASSET_CONDITIONS = {
+  EXCELLENT: "EXCELLENT",
+  GOOD: "GOOD",
+  FAIR: "FAIR",
+  POOR: "POOR",
+  NON_OPERATIONAL: "NON-OPERATIONAL",
+} as const;
+
 // Tables
 
 export const bases = pgTable("bases", {
