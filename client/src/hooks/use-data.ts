@@ -121,7 +121,7 @@ export function useExpendAsset() {
 }
 
 // --- Dashboard ---
-export function useDashboardStats(filters?: { baseId?: number; startDate?: string; endDate?: string }) {
+export function useDashboardStats(filters?: { baseId?: number; startDate?: string; endDate?: string; type?: string }) {
   return useQuery({
     queryKey: [api.dashboard.stats.path, filters],
     queryFn: async () => {
@@ -129,6 +129,7 @@ export function useDashboardStats(filters?: { baseId?: number; startDate?: strin
       if (filters?.baseId) url.searchParams.append("baseId", filters.baseId.toString());
       if (filters?.startDate) url.searchParams.append("startDate", filters.startDate);
       if (filters?.endDate) url.searchParams.append("endDate", filters.endDate);
+      if (filters?.type) url.searchParams.append("type", filters.type);
 
       const res = await fetch(url.toString());
       if (!res.ok) throw new Error("Failed to fetch dashboard stats");

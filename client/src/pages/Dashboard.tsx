@@ -22,7 +22,11 @@ import { clsx } from "clsx";
 export default function Dashboard() {
   const [selectedBaseId, setSelectedBaseId] = useState<number | undefined>(undefined);
   const { data: bases } = useBases();
-  const { data: stats, isLoading } = useDashboardStats({ baseId: selectedBaseId });
+  const [selectedType, setSelectedType] = useState<string | undefined>(undefined);
+  const { data: stats, isLoading } = useDashboardStats({ 
+    baseId: selectedBaseId,
+    type: selectedType 
+  });
   const [isNetMovementOpen, setIsNetMovementOpen] = useState(false);
 
   // Mock data for charts since the API returns aggregated stats
@@ -63,6 +67,17 @@ export default function Dashboard() {
             {bases?.map(base => (
               <option key={base.id} value={base.id}>{base.name}</option>
             ))}
+          </select>
+          <select 
+            className="bg-card border border-border text-sm rounded-sm px-3 py-2 text-foreground focus:ring-1 focus:ring-primary focus:outline-none font-mono"
+            value={selectedType || ""}
+            onChange={(e) => setSelectedType(e.target.value || undefined)}
+          >
+            <option value="">ALL TYPES</option>
+            <option value="VEHICLE">VEHICLES</option>
+            <option value="WEAPON">WEAPONS</option>
+            <option value="AMMUNITION">AMMUNITION</option>
+            <option value="COMMUNICATION">COMMS</option>
           </select>
           <button className="bg-secondary text-secondary-foreground p-2 rounded-sm border border-border hover:bg-secondary/80">
             <Calendar className="w-5 h-5" />

@@ -151,14 +151,6 @@ export async function registerRoutes(
     // Log Transaction
     await storage.createTransaction({
       assetId,
-      type: TRANSACTION_TYPES.TRANSFER_OUT, // Needs pairs? Or just one log?
-      // Requirement: "Net Movement (Purchases + Transfer In - Transfer Out)"
-      // We should probably log a Transfer Out from Source and Transfer In to Dest?
-      // Or one record with from/to?
-      // schema has fromBaseId and toBaseId.
-      // So one record is enough. But for counting "Transfer In" vs "Transfer Out" for a SPECIFIC base:
-      // A base sees it as Transfer Out if fromBaseId == base.id
-      // A base sees it as Transfer In if toBaseId == base.id
       type: TRANSACTION_TYPES.TRANSFER_OUT,
       fromBaseId: asset.baseId,
       toBaseId: toBaseId,
