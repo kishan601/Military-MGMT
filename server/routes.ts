@@ -5,6 +5,7 @@ import { setupAuth } from "./auth";
 import { api } from "@shared/routes";
 import { z } from "zod";
 import { ASSET_STATUS, TRANSACTION_TYPES } from "@shared/schema";
+import { hashPassword } from "./auth";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -231,13 +232,13 @@ async function seedDatabase() {
         const baseC = await storage.createBase({ name: "HQ", location: "Capital", commander: "Gen. Doe" });
         
         // Create Admin User
-        // Need to use the auth helper to hash password really, but for seed we can't easily access the internal hash function from here without exporting it.
-        // For now, I'll rely on the register endpoint or just create a user with a known hash if I could.
-        // Since I can't easily hash here without duplicating code, I'll skip user seeding or create a dummy one.
-        // Actually, I can export hashPassword from auth.ts if I modify it, but I didn't.
-        // I will just create a user with a "plain" password and assume the auth strategy handles it? No, it expects hash.
-        // I'll skip user seeding for safety and let user register. 
-        // OR I can make the hashPassword exported. 
+        const adminPassword = await hashPassword("admin123");
+        await storage.createUser({
+            username: "admin",
+            password: adminPassword,
+            role: "ADMIN"
+        });
+
         // I'll make the bases available.
     }
 }
