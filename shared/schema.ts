@@ -41,6 +41,7 @@ export const bases = pgTable("bases", {
   name: text("name").notNull(),
   location: text("location").notNull(),
   commander: text("commander"),
+  budget: numeric("budget").default("0"),
 });
 
 export const users = pgTable("users", {
