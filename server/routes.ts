@@ -38,6 +38,30 @@ export async function registerRoutes(
     }
   });
 
+  app.patch("/api/bases/:id", async (req, res) => {
+    if (!req.isAuthenticated() || (req.user as any).role !== "ADMIN") {
+      return res.status(403).send("Admin access required");
+    }
+    const baseId = Number(req.params.id);
+    const updates = req.body;
+    
+    // Validate budget if provided
+    if (updates.budget !== undefined && isNaN(Number(updates.budget))) {
+      return res.status(400).send("Invalid budget value");
+    }
+
+    const base = await storage.updateBase(baseId, updates);
+    res.json(base);
+  });
+
+  app.get("/api/admin/users", async (req, res) => {
+    if (!req.isAuthenticated() || (req.user as any).role !== "ADMIN") {
+      return res.status(403).send("Admin access required");
+    }
+    const allUsers = await db.select().from(users);
+    res.json(allUsers);
+  });
+
   // Assets
   app.get(api.assets.list.path, async (req, res) => {
     const filters = req.query;

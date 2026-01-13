@@ -19,6 +19,7 @@ export interface IStorage {
   getBases(): Promise<Base[]>;
   getBase(id: number): Promise<Base | undefined>;
   createBase(base: InsertBase): Promise<Base>;
+  updateBase(id: number, updates: Partial<InsertBase>): Promise<Base>;
 
   // Assets
   getAssets(filters?: { baseId?: number; type?: string; status?: string }): Promise<Asset[]>;
@@ -61,6 +62,11 @@ export class DatabaseStorage implements IStorage {
 
   async createBase(insertBase: InsertBase): Promise<Base> {
     const [base] = await db.insert(bases).values(insertBase).returning();
+    return base;
+  }
+
+  async updateBase(id: number, updates: Partial<InsertBase>): Promise<Base> {
+    const [base] = await db.update(bases).set(updates).where(eq(bases.id, id)).returning();
     return base;
   }
 

@@ -11,7 +11,8 @@ import {
   Menu,
   X,
   Crosshair,
-  User
+  User,
+  Landmark
 } from "lucide-react";
 import { useState } from "react";
 import { clsx } from "clsx";
@@ -28,6 +29,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
     { href: "/transfers", label: "Transfers", icon: ArrowRightLeft },
     { href: "/purchases", label: "Purchases", icon: ShoppingCart, role: [ROLES.ADMIN, ROLES.COMMANDER] },
     { href: "/assignments", label: "Assignments", icon: Users },
+    { href: "/admin/users", label: "Users", icon: User, role: [ROLES.ADMIN] },
+    { href: "/admin/bases", label: "Bases", icon: Landmark, role: [ROLES.ADMIN] },
   ];
 
   const filteredNavItems = navItems.filter(item => 

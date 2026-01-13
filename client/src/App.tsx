@@ -10,10 +10,12 @@ import Assets from "@/pages/Assets";
 import Purchases from "@/pages/Purchases";
 import Transfers from "@/pages/Transfers";
 import Assignments from "@/pages/Assignments";
+import UserManagement from "@/pages/admin/UserManagement";
+import BaseManagement from "@/pages/admin/BaseManagement";
 import { Loader2 } from "lucide-react";
 
 // Protected Route Wrapper
-function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
+function ProtectedRoute({ component: Component, adminOnly }: { component: React.ComponentType, adminOnly?: boolean }) {
   const { user, isLoading } = useAuth();
 
   if (isLoading) {
@@ -26,6 +28,10 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
 
   if (!user) {
     return <Redirect to="/" />;
+  }
+
+  if (adminOnly && user.role !== "ADMIN") {
+    return <Redirect to="/dashboard" />;
   }
 
   return <Component />;
@@ -49,6 +55,12 @@ function Router() {
       </Route>
       <Route path="/assignments">
         <ProtectedRoute component={Assignments} />
+      </Route>
+      <Route path="/admin/users">
+        <ProtectedRoute component={UserManagement} adminOnly />
+      </Route>
+      <Route path="/admin/bases">
+        <ProtectedRoute component={BaseManagement} adminOnly />
       </Route>
       <Route component={NotFound} />
     </Switch>
